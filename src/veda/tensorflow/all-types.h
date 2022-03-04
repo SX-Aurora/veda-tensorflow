@@ -1,0 +1,10 @@
+GEN(int8_t)
+GEN(int16_t)
+GEN(int32_t)
+GEN(int64_t)
+GEN(uint8_t)
+GEN(uint16_t)
+GEN(uint32_t)
+GEN(uint64_t)
+GEN(float)
+#undef GEN
