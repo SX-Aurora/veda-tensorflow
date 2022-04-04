@@ -261,7 +261,7 @@ void init_resource_variable_ops(void) {
 	using namespace ::tensorflow;
 
 	#define REGISTER_TYPES(FUNC) FUNC(uint8_t) FUNC(uint16_t) FUNC(uint32_t) FUNC(uint64_t) FUNC(int8_t) FUNC(int16_t) FUNC(int32_t) FUNC(int64_t) FUNC(float) FUNC(double)
-	#define REGISTER_AssignVariableOp(type)				REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype"), AssignVariableOp<VEDevice, type>);
+	#define REGISTER_AssignVariableOp(type)				REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype"), AssignVariableOp<VEDATensors_handle_struct, type>);
 
 	REGISTER_TYPES(REGISTER_AssignVariableOp)
 

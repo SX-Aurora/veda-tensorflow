@@ -4,78 +4,67 @@
 #include <chrono>
 
 struct SP_Event_st {
-private:
-	SE_EventStatus 			m_status;
-	std::condition_variable	m_condition;
-	std::mutex				m_mutex;
+	SE_EventStatus 			status;
+	std::condition_variable	condition;
+	std::mutex				mutex;
 
-public:
-	inline								SP_Event_st	(void) : m_status(SE_EVENT_COMPLETE) {}
-	inline	SE_EventStatus				status		(void) const					{	return m_status;	}
-	inline	std::condition_variable&	condition	(void)							{	return m_condition;	}
-	inline	std::mutex&					mutex		(void)							{	return m_mutex;		}
-	inline	void						setStatus	(const SE_EventStatus status)	{	m_status = status;	}
+	inline SP_Event_st(void) : status(SE_EVENT_COMPLETE) {}
 };
 
-#define LOCK(event) std::lock_guard<std::mutex> __lock__ (event->mutex())
+#define LOCK(event) std::lock_guard<std::mutex> __lock__ (event->mutex)
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
 static void create_event(const SP_Device* device, SP_Event* event, TF_Status* status) {
-	//L_TRACE("create_event");
 	*event = new SP_Event_st;
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void destroy_event(const SP_Device* device, SP_Event event) {
-	//L_TRACE("destroy_event");
 	delete event;
 }
 
 //------------------------------------------------------------------------------
 static SE_EventStatus get_event_status(const SP_Device* device, SP_Event event) {
-	//L_TRACE("get_event_status");
 	LOCK(event);
-	return event->status();
+	return event->status;
 }
 
 //------------------------------------------------------------------------------
 static void record_event_helper(VEDAstream stream, VEDAresult result, void* args) {
-	auto event = (SP_Event)args;
+	auto event	= (SP_Event)args;
+
 	{
 		LOCK(event);
-		ASSERT(event->status() == SE_EVENT_PENDING);
-		event->setStatus(SE_EVENT_COMPLETE);
+		ASSERT(event->status == SE_EVENT_PENDING);
+		event->status = SE_EVENT_COMPLETE;
 	}
-	event->condition().notify_all();
+
+	event->condition.notify_all();
 }
 
 //------------------------------------------------------------------------------
 static void record_event(const SP_Device* device, SP_Stream stream, SP_Event event, TF_Status* status) {
-	//L_TRACE("record_event");
 	TF_SetStatus(status, TF_OK,	"");
 
-	GUARD(device);
 	{
 		LOCK(event);
-		ASSERT(event->status() == SE_EVENT_COMPLETE);
-		event->setStatus(SE_EVENT_PENDING);
+		ASSERT(event->status == SE_EVENT_COMPLETE);
+		event->status = SE_EVENT_PENDING;
 	}
+
+	GUARD(device);
 	CVEDA(vedaStreamAddCallback(stream->stream, record_event_helper, event, 0));
 }
 
 //------------------------------------------------------------------------------
 static void wait_for_event(const SP_Device* const device, SP_Stream stream, SP_Event event, TF_Status* const status) {
-	//L_TRACE("wait_for_event");
 	TF_SetStatus(status, TF_OK,	"");
 
-	while(true) {
-		std::unique_lock<std::mutex> lock(event->mutex());
-		event->condition().wait(lock);
-		if(event->status() == SE_EVENT_COMPLETE)
-			return;
-	}
+	std::unique_lock<std::mutex> lock(event->mutex);
+	while(event->status != SE_EVENT_COMPLETE)
+		event->condition.wait(lock);
 }
 
 //------------------------------------------------------------------------------
@@ -90,7 +79,7 @@ static void allocate(const SP_Device* device, uint64_t size, int64_t memory_spac
 
 //------------------------------------------------------------------------------
 static void deallocate(const SP_Device* device, SP_DeviceMemoryBase* memory) {
-	GUARD(device);
+	// No guard needed, MemFreeAsync automatically selects the correct device.
 	CVEDA(vedaMemFreeAsync((VEDAdeviceptr)memory->opaque, 0));
 }
 
@@ -118,7 +107,7 @@ static void* unified_memory_allocate(const SP_Device* device, uint64_t bytes) {
 
 //------------------------------------------------------------------------------
 static void unified_memory_deallocate(const SP_Device* device, void* location) {
-	GUARD(device);
+	// No guard needed. MemFree automatically selects the correct device.
 	CVEDA(vedaMemFreeAsync((VEDAdeviceptr)location, 0));
 }
 
@@ -139,14 +128,16 @@ static TF_Bool device_memory_usage(const SP_Device* device, int64_t* free, int64
 
 //------------------------------------------------------------------------------
 static void create_stream(const SP_Device* device, SP_Stream* stream, TF_Status* status) {
-	*stream = new SP_Stream_st;
-	(*stream)->stream = 0;
+	static SP_Stream_st s_stream = {0};
+	*stream = &s_stream;
+	//*stream = new SP_Stream_st;
+	//(*stream)->stream = 0;
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void destroy_stream(const SP_Device* device, SP_Stream stream) {
-	delete stream;
+	//delete stream;
 }
 
 //------------------------------------------------------------------------------
@@ -231,24 +222,21 @@ static void synchronize_all_activity(const SP_Device* device, TF_Status* status)
 }
 
 //------------------------------------------------------------------------------
-struct HostCallbackData {
-	SE_StatusCallbackFn	func;
-	void*				arg;
-	inline HostCallbackData(SE_StatusCallbackFn _func, void* _arg) : func(_func), arg(_arg) {}
-};
+typedef std::tuple<SE_StatusCallbackFn, void*> host_callback_t;
 
 //------------------------------------------------------------------------------
 static void host_callback_helper(VEDAstream stream, VEDAresult result, void* args) {
-	L_TRACE("host_callback_helper");
-	auto data = (HostCallbackData*)args;
-	data->func(data->arg, 0);
+	auto data	= (host_callback_t*)args;
+	auto func	= std::get<0>(*data);
+	auto arg	= std::get<1>(*data);
 	delete data;
+	func(arg, 0);
 }
 
 //------------------------------------------------------------------------------
 static TF_Bool host_callback(const SP_Device* device, SP_Stream stream, SE_StatusCallbackFn callback_fn, void* callback_arg) {
 	GUARD(device);
-	CVEDA(vedaStreamAddCallback(stream->stream, host_callback_helper, new HostCallbackData(callback_fn, callback_arg), 0));
+	CVEDA(vedaStreamAddCallback(stream->stream, host_callback_helper, new host_callback_t(callback_fn, callback_arg), 0));
 	return true;
 }
 

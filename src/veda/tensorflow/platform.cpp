@@ -31,10 +31,8 @@ static	void destroy_timer_fns		(const SP_Platform* platform, SP_TimerFns* timer_
 
 //------------------------------------------------------------------------------
 static void create_device(const SP_Platform* platform, SE_CreateDeviceParams* params, TF_Status* status) {
-	VEDAcontext ctx;
-	CVEDA(vedaDevicePrimaryCtxRetain(&ctx, params->ordinal));
 	VEDATensors_handle handle;
-	CVEDA(veda_tensors_create_handle_by_ctx(&handle, ctx));
+	CVEDA(veda_tensors_get_handle_by_id(&handle, params->ordinal));
 
 	params->device->device_handle	= handle;
 	params->device->hardware_name	= "SX-Aurora TSUBASA";

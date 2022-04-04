@@ -1,0 +1,21 @@
+{
+	"name":				"veda_tensorflow",
+	"version":			"@TENSORFLOW_VERSION@.post@VEDATensorFlow_VERSION@",
+	"platform":			"linux_x86_x64",
+	"summary":			"VEDA Tensorflow",
+	"readme":			"tensorflow-plugins/README.md",
+	"author":			"Nicolas Weber",
+	"author-email":		"nicolas.weber@neclab.eu",
+	"license":			"3 BSD-License",
+	"requires-python":	">=3.7",
+	"payload": [
+		"tensorflow-plugins/VEDA-TENSORFLOW-LICENSE",
+		"tensorflow-plugins/libveda-tensorflow.so"
+	],
+	"requires-dist": [
+		"veda (>= @VEDA_VERSION_MIN@, < @VEDA_VERSION_MAX@)",
+		"tungl (>= @Tungl_VERSION_MIN@, < @Tungl_VERSION_MAX@)",
+		"veda-tensors (>= @VEDATensors_VERSION_MIN@, < @VEDATensors_VERSION_MAX@)",
+		"tensorflow == @TENSORFLOW_VERSION@"
+	]
+}

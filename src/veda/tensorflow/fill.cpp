@@ -1,7 +1,5 @@
 #include <veda/tensorflow/api.h>
 
-using sol::runtime::native::tensorflow::ve::vedaHandle;
-
 namespace tensorflow {
 //------------------------------------------------------------------------------
 template<typename T, typename I>
@@ -9,6 +7,8 @@ struct Fill : public OpKernel {
     explicit Fill(OpKernelConstruction* ctx) : OpKernel(ctx) {}
 
     void Compute(OpKernelContext* ctx) override {
+		using namespace veda::tensorflow; 
+
 		auto& input_0 = ctx->input(0);
 		auto& input_1 = ctx->input(1);
 
@@ -19,7 +19,10 @@ struct Fill : public OpKernel {
 		Tensor* out = 0;
 		OP_REQUIRES_OK(ctx, ctx->allocate_output(0, shape, &out));
 
-		vedaHandle(ctx)->copy(ptr<T>(out), ptr<T>(input_1), cnt(out), cnt(input_1), sol_dtype<T>());
+		auto d_out		= tf2veda<T>(out);
+		auto d_input_1	= tf2veda<T>(input_1);
+
+		CVEDA(veda_tensors_copy(handle(ctx), &d_out, &d_input_1));
     }
 };
 

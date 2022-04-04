@@ -2,25 +2,25 @@ namespace tensorflow {
 	namespace functor {
 //------------------------------------------------------------------------------
 template<typename T>
-struct DenseUpdate<VEDevice, T, ADD> {
-	void operator()(const VEDevice& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
-		const_cast<VEDevice&>(d).unaryTT((VEDAdeviceptr)params.data(), (VEDAdeviceptr)params.data, (VEDAdeviceptr)update.data(), params.size(), update.size(), sol::runtime::UnaryOp::ADD, sol_dtype<T>());
+struct DenseUpdate<VEDATensors_handle_struct, T, ADD> {
+	void operator()(const VEDATensors_handle_struct& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
+		CVEDA(veda_tensors_unary_ll_tt(&d, (VEDAdeviceptr)params.data, (VEDAdeviceptr)update.data(), params.size(), update.size(), VEDA_TENSORS_UNARY_ADD, veda::tensorflow::dtype<T>()));
 	}
 };
 
 //------------------------------------------------------------------------------
 template<typename T>
-struct DenseUpdate<VEDevice, T, SUB> {
-	void operator()(const VEDevice& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
-		const_cast<VEDevice&>(d).unaryTT((VEDAdeviceptr)params.data(), (VEDAdeviceptr)params.data, (VEDAdeviceptr)update.data(), params.size(), update.size(), sol::runtime::UnaryOp::SUB, sol_dtype<T>());
+struct DenseUpdate<VEDATensors_handle_struct, T, SUB> {
+	void operator()(const VEDATensors_handle_struct& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
+		CVEDA(veda_tensors_unary_ll_tt(&d, (VEDAdeviceptr)params.data, (VEDAdeviceptr)update.data(), params.size(), update.size(), VEDA_TENSORS_UNARY_SUB, veda::tensorflow::dtype<T>()));
 	}
 };
 
 //------------------------------------------------------------------------------
 template<typename T>
-struct DenseUpdate<VEDevice, T, ASSIGN> {
-	void operator()(const VEDevice& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
-		const_cast<VEDevice&>(d).copy((VEDAdeviceptr)params.data(), (VEDAdeviceptr)update.data(), params.size(), update.size(), sol_dtype<T>());
+struct DenseUpdate<VEDATensors_handle_struct, T, ASSIGN> {
+	void operator()(const VEDATensors_handle_struct& d, typename TTypes<T>::Flat params, typename TTypes<T>::ConstFlat update) {
+		CVEDA(veda_tensors_ll_copy(&d, (VEDAdeviceptr)params.data(), (VEDAdeviceptr)update.data(), params.size(), update.size(), veda::tensorflow::dtype<T>()));
 	}
 };
 

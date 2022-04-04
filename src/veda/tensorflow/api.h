@@ -58,36 +58,9 @@
 #define REG9_( N, T, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, O, ...)		REG1_(N, T, C, T0, O, __VA_ARGS__); REG8_(N, T, C, T1, T2, T3, T4, T5, T6, T7, T8, O, __VA_ARGS__)
 #define REG10_(N, T, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, O, ...)	REG1_(N, T, C, T0, O, __VA_ARGS__); REG9_(N, T, C, T1, T2, T3, T4, T5, T6, T7, T8, T9, O, __VA_ARGS__)
 
-// TF Types --------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 namespace tensorflow {
 	constexpr std::array<DataType, 11> VE_TYPES = {{DT_UINT8, DT_UINT16, DT_INT8, DT_INT16, DT_INT32, DT_UINT32, DT_UINT64, DT_INT64, DT_FLOAT, DT_DOUBLE, DT_BOOL}};
-	
-//--------------------------------------------------------------------------
-static inline size_t cnt(const Tensor& t) {
-	size_t c = 1;
-	for(auto d : t.shape())
-		c *= d.size;
-	return c;
-}
-
-//------------------------------------------------------------------------------
-static inline size_t cnt(const Tensor* t) {
-	return cnt(*t);
-}
-
-//------------------------------------------------------------------------------
-template<typename T>
-static inline VEDAdeviceptr ptr(const Tensor& t) {
-	return (VEDAdeviceptr)t.flat<T>().data();
-}
-
-//------------------------------------------------------------------------------
-template<typename T>
-static inline VEDAdeviceptr	ptr(const Tensor* t) {
-	return ptr<T>(*t);
-}
-
-//------------------------------------------------------------------------------
 }
 
 //------------------------------------------------------------------------------
@@ -102,6 +75,7 @@ struct SP_Timer_st {
 };
 
 #include "__ns.h"
+//------------------------------------------------------------------------------
 #define HANDLE(DEVICE)	((VEDATensors_handle)DEVICE->device_handle)
 #define GUARD(DEVICE)	veda::tensorflow::Guard __guard__(HANDLE(DEVICE))
 
@@ -127,17 +101,41 @@ struct Guard {
 };
 
 //------------------------------------------------------------------------------
-VEDAcontext	vedaContext					(const ::tensorflow::OpKernelContext* ctx);
-void		init_binary					(void);
-void		init_constant_op			(void);
-void		init_fill					(void);
-void		init_function_ops			(void);
-void		init_resource_variable_ops	(void);
-void		init_unary_t				(void);
-void		init_unary_tt				(void);
-void		init_unary_tt_update		(void);
-void		init_shape_op				(void);
+template<typename T> VEDATensors_dtype dtype(void);
+template<>	inline VEDATensors_dtype	dtype<bool>		(void)	{	return VEDA_TENSORS_DTYPE_S8;	}
+template<>	inline VEDATensors_dtype	dtype<int8_t>	(void)	{	return VEDA_TENSORS_DTYPE_S8;	}
+template<>	inline VEDATensors_dtype	dtype<int16_t>	(void)	{	return VEDA_TENSORS_DTYPE_S16;	}
+template<>	inline VEDATensors_dtype	dtype<int32_t>	(void)	{	return VEDA_TENSORS_DTYPE_S32;	}
+template<>	inline VEDATensors_dtype	dtype<int64_t>	(void)	{	return VEDA_TENSORS_DTYPE_S64;	}
+template<>	inline VEDATensors_dtype	dtype<uint8_t>	(void)	{	return VEDA_TENSORS_DTYPE_U8;	}
+template<>	inline VEDATensors_dtype	dtype<uint16_t>	(void)	{	return VEDA_TENSORS_DTYPE_U16;	}
+template<>	inline VEDATensors_dtype	dtype<uint32_t>	(void)	{	return VEDA_TENSORS_DTYPE_U32;	}
+template<>	inline VEDATensors_dtype	dtype<uint64_t>	(void)	{	return VEDA_TENSORS_DTYPE_U64;	}
+template<>	inline VEDATensors_dtype	dtype<float>	(void)	{	return VEDA_TENSORS_DTYPE_F32;	}
+template<>	inline VEDATensors_dtype	dtype<double>	(void)	{	return VEDA_TENSORS_DTYPE_F64;	}
+
+//------------------------------------------------------------------------------
+template<typename T> inline VEDATensors_tensor tf2veda(const ::tensorflow::Tensor* t) {
+	return {t->dims(), t->shape().dim_sizes(), dtype<T>(), (VEDAdeviceptr)t->flat<T>().data()};
+}
+
+//------------------------------------------------------------------------------
+template<typename T> inline VEDATensors_tensor tf2veda(const ::tensorflow::Tensor& t) {
+	return tf2veda<T>(&t);
+}
+
+//------------------------------------------------------------------------------
+VEDATensors_handle	handle						(const ::tensorflow::OpKernelContext* ctx);
+void				init_binary					(void);
+void				init_constant_op			(void);
+void				init_fill					(void);
+void				init_function_ops			(void);
+void				init_resource_variable_ops	(void);
+void				init_unary_t				(void);
+void				init_unary_tt				(void);
+void				init_unary_tt_update		(void);
+void				init_shape_op				(void);
 //------------------------------------------------------------------------------
 #include "__ns.h"
 
-// TODO: #include "dense_update_functor.h"
+#include "dense_update_functor.h"

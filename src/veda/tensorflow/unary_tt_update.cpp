@@ -1,14 +1,14 @@
 #include <veda/tensorflow/api.h>
 
-using sol::runtime::native::tensorflow::ve::vedaHandle;
-
 namespace tensorflow {
 //------------------------------------------------------------------------------
-template<typename T, int OP>
+template<typename T, VEDATensors_unary_op OP>
 struct UnaryTTUpdate : public OpKernel {
 	explicit UnaryTTUpdate(OpKernelConstruction* ctx) : OpKernel(ctx) {}
 
 	void Compute(OpKernelContext* ctx) override {
+		using namespace veda::tensorflow;
+
 		core::RefCountPtr<Var> variable;
 		OP_REQUIRES_OK(ctx, LookupResource(ctx, HandleFromInput(ctx, 0), &variable));
 
@@ -21,8 +21,11 @@ struct UnaryTTUpdate : public OpKernel {
 									" using a Tensor with shape ",
 									value.shape().DebugString(),
 									", shapes must be equal."));
-		OP_REQUIRES_OK(ctx, PrepareToUpdateVariable<VEDevice, T>(ctx, var_tensor, variable->copy_on_read_mode.load()));
-		vedaHandle(ctx)->unaryTT(ptr<T>(var_tensor), ptr<T>(var_tensor), ptr<T>(value), cnt(var_tensor), cnt(var_tensor), cnt(value), OP, sol_dtype<T>());
+		OP_REQUIRES_OK(ctx, PrepareToUpdateVariable<VEDATensors_handle_struct, T>(ctx, var_tensor, variable->copy_on_read_mode.load()));
+
+		auto d_var_tensor	= tf2veda<T>(var_tensor);
+		auto d_value		= tf2veda<T>(value);
+		CVEDA(veda_tensors_unary_tt(handle(ctx), &d_var_tensor, &d_var_tensor, &d_value, OP));
 	}
 };
 
@@ -33,8 +36,8 @@ struct UnaryTTUpdate : public OpKernel {
 //------------------------------------------------------------------------------
 void init_unary_tt_update(void) {
 	#define UnaryTTUpdate(N, O)	REG10_(N, "dtype",, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::UnaryTTUpdate, O)
-	UnaryTTUpdate("AssignAddVariableOp",	UnaryOp::ADD);
-	UnaryTTUpdate("AssignSubVariableOp",	UnaryOp::ADD);
+	UnaryTTUpdate("AssignAddVariableOp",	VEDA_TENSORS_UNARY_ADD);
+	UnaryTTUpdate("AssignSubVariableOp",	VEDA_TENSORS_UNARY_ADD);
 }
 
 //------------------------------------------------------------------------------

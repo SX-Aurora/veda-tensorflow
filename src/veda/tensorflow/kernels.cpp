@@ -2,17 +2,17 @@
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
-device::ve::Handle*	vedaHandle(const ::tensorflow::OpKernelContext* ctx) {
-	auto handle = dynamic_cast<device::ve::Handle*>(device::Type("ve")->handle(ctx->device()->tensorflow_gpu_device_info()->gpu_id));
-	ASSERT(handle);
-	return handle;
+VEDATensors_handle handle(const ::tensorflow::OpKernelContext* ctx) {
+	VEDATensors_handle hnd;
+	CVEDA(veda_tensors_get_handle_by_id(&hnd, ctx->device()->tensorflow_gpu_device_info()->gpu_id));
+	return hnd;
 }
 
 //------------------------------------------------------------------------------
 #include "__ns.h"
 
 extern "C" void TF_InitKernel(void) {
-	using namespace sol::runtime::native::tensorflow::ve;
+	using namespace veda::tensorflow;
 
 	// SEE: https://github.com/tensorflow/community/blob/master/rfcs/20190814-kernel-and-op-registration.md
 	// SEE: https://github.com/tensorflow/tensorflow/blob/v2.5.0/tensorflow/c/kernels.cc#L48
