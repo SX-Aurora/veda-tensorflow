@@ -274,6 +274,26 @@ static void stop_timer(const SP_Device* device, SP_Stream stream, SP_Timer timer
 }
 
 //------------------------------------------------------------------------------
+#if TF_MINOR_VERSION >= 7
+static void mem_zero(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint64_t size, TF_Status* status) {
+	CVEDA(vedaMemsetD8Async((VEDAdeviceptr)location->opaque, 0, size, 0));
+	TF_SetStatus(status, TF_OK,	"");
+}
+
+//------------------------------------------------------------------------------
+static void memset8(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint8_t pattern, uint64_t size, TF_Status* status) {
+	CVEDA(vedaMemsetD8Async((VEDAdeviceptr)location->opaque, pattern, size, 0));
+	TF_SetStatus(status, TF_OK,	"");
+}
+
+//------------------------------------------------------------------------------
+static void memset32(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint32_t pattern, uint64_t size, TF_Status* status) {
+	CVEDA(vedaMemsetD32Async((VEDAdeviceptr)location->opaque, pattern, size, 0));
+	TF_SetStatus(status, TF_OK,	"");
+}
+#endif
+
+//------------------------------------------------------------------------------
 void create_stream_executor(const SP_Platform* platform, SE_CreateStreamExecutorParams* params, TF_Status* status) {
 	params->stream_executor->allocate					= &allocate;
 	params->stream_executor->block_host_for_event		= &block_host_for_event;
@@ -306,6 +326,13 @@ void create_stream_executor(const SP_Platform* platform, SE_CreateStreamExecutor
 	params->stream_executor->unified_memory_allocate	= &unified_memory_allocate;
 	params->stream_executor->unified_memory_deallocate	= &unified_memory_deallocate;
 	params->stream_executor->wait_for_event				= &wait_for_event;
+
+#if TF_MINOR_VERSION >= 7
+	params->stream_executor->mem_zero					= &mem_zero;
+	params->stream_executor->memset						= &memset8;
+	params->stream_executor->memset32					= &memset32;
+#endif
+
 	TF_SetStatus(status, TF_OK,	"");
 }
 

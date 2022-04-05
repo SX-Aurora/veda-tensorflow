@@ -225,11 +225,13 @@ VarHandleOp::VarHandleOp(OpKernelConstruction* context) : OpKernel(context) {
 	is_anonymous_ = name_ == ResourceHandle::ANONYMOUS_NAME;
 
 	if(!is_anonymous_) {
+#if TF_MINOR_VERSION < 8
+		auto& const_tensor_ = resource_;
+#endif
 		AllocatorAttributes attr;
 		attr.set_on_host(true);
-		OP_REQUIRES_OK(context, context->allocate_temp(DT_RESOURCE, TensorShape({}),
-													&resource_, attr));
-		resource_.scalar<ResourceHandle>()() = MakeResourceHandle<Var>(
+		OP_REQUIRES_OK(context, context->allocate_temp(DT_RESOURCE, TensorShape({}), &const_tensor_, attr));
+		const_tensor_.scalar<ResourceHandle>()() = MakeResourceHandle<Var>(
 			context, container_, name_,
 			std::vector<DtypeAndPartialTensorShape>{dtype_and_shape_});
 	}
@@ -248,7 +250,10 @@ void VarHandleOp::Compute(OpKernelContext* ctx) {
 			ctx->stack_trace());
 		ctx->set_output(0, handle);
 	} else {
-		ctx->set_output(0, resource_);
+#if TF_MINOR_VERSION < 8
+		auto& const_tensor_ = resource_;
+#endif
+		ctx->set_output(0, const_tensor_);
 	}
 }
 

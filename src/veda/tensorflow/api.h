@@ -4,9 +4,21 @@
 #error "TF requires _GLIBCXX_USE_CXX11_ABI=0"
 #endif
 
+#include <tensorflow/core/public/version.h>
+
+#if TF_MAJOR_VERSION != 2
+#error "Requires TF 2.X"
+#endif
+
 // https://stackoverflow.com/questions/2324658/how-to-determine-the-version-of-the-c-standard-used-by-the-compiler
-#if __cplusplus != 201103L
-#error "TF cannot be linked when not using C++11"
+#if TF_MINOR_VERSION <= 6
+	#if __cplusplus != 201103L
+	#error "TF < 2.7 cannot be linked when not using C++11"
+	#endif
+#else
+	#if __cplusplus != 201402L
+	#error "TF >= 2.8 cannot be linked when not using C++14"
+	#endif
 #endif
 
 #define L_MODULE "VEDA-TensorFlow"

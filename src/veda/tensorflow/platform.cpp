@@ -72,7 +72,9 @@ extern "C" void SE_InitPlugin(SE_PlatformRegistrationParams* params, TF_Status* 
 	using namespace veda::tensorflow;
 
 	L_TRACE(">> SE_InitPlugin");
-	CVEDA(vedaInit(0));
+	auto res = vedaInit(0);
+	if(res != VEDA_SUCCESS && res != VEDA_ERROR_ALREADY_INITIALIZED)
+		CVEDA(res);
 
 	params->destroy_platform						= &destroy_platform;
 	params->destroy_platform_fns					= &destroy_platform_fns;

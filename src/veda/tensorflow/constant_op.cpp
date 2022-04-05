@@ -21,7 +21,6 @@ static NodeDef StripTensorDataFromNodeDef(OpKernelConstruction* ctx) {
 //------------------------------------------------------------------------------
 ConstantOp::ConstantOp(OpKernelConstruction* ctx) : OpKernel(ctx, StripTensorDataFromNodeDef(ctx), false), tensor_(ctx->output_type(0)) {
 	const TensorProto* proto = nullptr;
-	ScopedMemoryDebugAnnotation op_annotation(name_view().data());
 	OP_REQUIRES_OK(ctx, ctx->GetAttr("value", &proto));
 	OP_REQUIRES_OK(ctx, ctx->device()->MakeTensorFromProto(*proto, AllocatorAttributes(), &tensor_));
 	OP_REQUIRES(ctx, ctx->output_type(0) == tensor_.dtype(),

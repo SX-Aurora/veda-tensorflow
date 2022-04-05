@@ -6,7 +6,14 @@ VEDA TensorFlow is a library to add device support for the NEC SX-Aurora TSUBASA
 <table>
 <tr><th>Version</th><th>Comment</th></tr>
 
-<tr><td>v0.1.0</td><td>
+<tr><td>v2</td><td>
+<ul>
+	<li>Minor changes to enable TF v2.7.1 and v2.8.0</li>
+	<li>Fixed vedaInit error checking to ignore if already initialized</li>
+</ul>
+</td></tr>
+
+<tr><td>v1</td><td>
 Initial Release
 </td></tr>
 
