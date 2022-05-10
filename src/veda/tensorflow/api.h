@@ -73,6 +73,10 @@
 // -----------------------------------------------------------------------------
 namespace tensorflow {
 	constexpr std::array<DataType, 11> VE_TYPES = {{DT_UINT8, DT_UINT16, DT_INT8, DT_INT16, DT_INT32, DT_UINT32, DT_UINT64, DT_INT64, DT_FLOAT, DT_DOUBLE, DT_BOOL}};
+<<<<<<< HEAD
+=======
+	typedef VEDATensors_handle_struct VEDevice;
+>>>>>>> master
 }
 
 //------------------------------------------------------------------------------
@@ -132,9 +136,9 @@ template<typename T> inline VEDATensors_tensor tf2veda(const ::tensorflow::Tenso
 }
 
 //------------------------------------------------------------------------------
-template<typename T> inline VEDATensors_tensor tf2veda(const ::tensorflow::Tensor& t) {
-	return tf2veda<T>(&t);
-}
+template<typename T> inline VEDATensors_scalar tf2scalar(const ::tensorflow::Tensor* t)	{	return veda_tensors_scalar(t->scalar<T>()());	}
+template<typename T> inline VEDATensors_scalar tf2scalar(const ::tensorflow::Tensor& t)	{	return tf2scalar<T>(&t);						}
+template<typename T> inline VEDATensors_tensor tf2veda	(const ::tensorflow::Tensor& t)	{	return tf2veda<T>(&t);							}
 
 //------------------------------------------------------------------------------
 VEDATensors_handle	handle						(const ::tensorflow::OpKernelContext* ctx);
@@ -143,10 +147,12 @@ void				init_constant_op			(void);
 void				init_fill					(void);
 void				init_function_ops			(void);
 void				init_resource_variable_ops	(void);
+void				init_shape_op				(void);
+void				init_training_ops			(void);
 void				init_unary_t				(void);
 void				init_unary_tt				(void);
 void				init_unary_tt_update		(void);
-void				init_shape_op				(void);
+
 //------------------------------------------------------------------------------
 #include "__ns.h"
 

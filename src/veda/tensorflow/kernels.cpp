@@ -24,6 +24,7 @@ extern "C" void TF_InitKernel(void) {
 	init_function_ops();
 	init_resource_variable_ops();
 	init_shape_op();
+	init_training_ops();
 	init_unary_t();
 	init_unary_tt();
 	init_unary_tt_update();

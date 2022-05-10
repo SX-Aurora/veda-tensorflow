@@ -15,4 +15,5 @@ LIST(APPEND SRC
 	${CMAKE_CURRENT_LIST_DIR}/unary_tt.cpp
 	${CMAKE_CURRENT_LIST_DIR}/unary_tt_update.cpp
 	${CMAKE_CURRENT_LIST_DIR}/shape_op.cpp
+	${CMAKE_CURRENT_LIST_DIR}/training_ops.cpp
 )

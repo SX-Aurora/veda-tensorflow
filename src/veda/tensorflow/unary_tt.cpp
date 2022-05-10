@@ -23,9 +23,9 @@ struct UnaryTT : public OpKernel {
 			case 2: {
 				auto& input_1 = ctx->input(1);
 
-				if(input_0.shape() == input_1.shape())	OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({0, 1}, 0, input_0.shape(), &out));
-				else if(input_0.shape().dims() == 0)	OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({1},    0, input_1.shape(), &out));
-				else if(input_1.shape().dims() == 0)	OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({0},    0, input_0.shape(), &out));
+				if(input_0.shape() == input_1.shape())										OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({0, 1}, 0, input_0.shape(), &out));
+				else if(input_0.shape().dims() == 0 || input_0.shape().num_elements() == 1)	OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({1},    0, input_1.shape(), &out));
+				else if(input_1.shape().dims() == 0 || input_1.shape().num_elements() == 1)	OP_REQUIRES_OK(ctx, ctx->forward_input_or_allocate_output({0},    0, input_0.shape(), &out));
 				THROWIF(out == 0, "Unsupported UnaryTT (%s)", veda_tensors_get_unary(OP));
 
 				auto d_out		= tf2veda<T>(out);

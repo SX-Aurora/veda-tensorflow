@@ -21,7 +21,7 @@ struct UnaryTTUpdate : public OpKernel {
 									" using a Tensor with shape ",
 									value.shape().DebugString(),
 									", shapes must be equal."));
-		OP_REQUIRES_OK(ctx, PrepareToUpdateVariable<VEDATensors_handle_struct, T>(ctx, var_tensor, variable->copy_on_read_mode.load()));
+		OP_REQUIRES_OK(ctx, PrepareToUpdateVariable<VEDevice, T>(ctx, var_tensor, variable->copy_on_read_mode.load()));
 
 		auto d_var_tensor	= tf2veda<T>(var_tensor);
 		auto d_value		= tf2veda<T>(value);
