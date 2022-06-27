@@ -32,7 +32,7 @@ struct Binary : public OpKernel {
 #include "__ns.h"
 //------------------------------------------------------------------------------
 void init_binary(void) {
-	#define Binary(N, O) REG10_(N, "T",, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::Binary, O)
+	#define Binary(N, O) REG10_(N, "T",, ::tensorflow::Binary, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, O)
 	Binary("Equal",			VEDA_TENSORS_BINARY_EQ);
 	Binary("Greater",		VEDA_TENSORS_BINARY_GT);
 	Binary("GreaterEqual",	VEDA_TENSORS_BINARY_GE);

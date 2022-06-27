@@ -46,7 +46,7 @@ struct UnaryTT : public OpKernel {
 #include "__ns.h"
 //------------------------------------------------------------------------------
 void init_unary_tt(void) {
-	#define UnaryTT(N, O) REG10_(N, "T",, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::UnaryTT, O)
+	#define UnaryTT(N, O) REG10_(N, "T",, ::tensorflow::UnaryTT, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, O)
 	UnaryTT("Add",		VEDA_TENSORS_UNARY_ADD);
 	UnaryTT("AddV2",	VEDA_TENSORS_UNARY_ADD);
 	UnaryTT("Mul",		VEDA_TENSORS_UNARY_MUL);

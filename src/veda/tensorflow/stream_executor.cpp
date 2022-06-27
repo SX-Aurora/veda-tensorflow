@@ -85,10 +85,12 @@ static void deallocate(const SP_Device* device, SP_DeviceMemoryBase* memory) {
 
 //------------------------------------------------------------------------------
 static void* host_memory_allocate(const SP_Device* device, uint64_t size) {
-	// [.../tensorflow/core/framework/tensor.h:870] Check failed: IsAligned() seems to require 32 bit alignment?
+	// [.../tensorflow/core/framework/tensor.h:870] Check failed: IsAligned() keeps failing with 16?
 	void* ptr = 0;
-	posix_memalign(&ptr, 32, size);
-	L_TRACE("[ve:%i] %p = malloc(%llu)", device->ordinal, ptr, size);
+	if(size) {
+		posix_memalign(&ptr, 64, size);
+		L_TRACE("[ve:%i] %p = malloc(%llu)", device->ordinal, ptr, size);
+	}
 	return ptr;
 }
 

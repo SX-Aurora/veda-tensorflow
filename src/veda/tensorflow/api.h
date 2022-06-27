@@ -1,23 +1,29 @@
 #pragma once
 
-#if _GLIBCXX_USE_CXX11_ABI != 0
-#error "TF requires _GLIBCXX_USE_CXX11_ABI=0"
-#endif
-
 #include <tensorflow/core/public/version.h>
 
 #if TF_MAJOR_VERSION != 2
-#error "Requires TF 2.X"
+#error "Requires TF v2.X"
+#endif
+
+#if TF_MINOR_VERSION < 9
+	#if _GLIBCXX_USE_CXX11_ABI != 0
+	#error "TF < v2.9 requires _GLIBCXX_USE_CXX11_ABI=0"
+	#endif
+#else
+	#if _GLIBCXX_USE_CXX11_ABI != 1
+	#error "TF >= v2.9 requires _GLIBCXX_USE_CXX11_ABI=1"
+	#endif
 #endif
 
 // https://stackoverflow.com/questions/2324658/how-to-determine-the-version-of-the-c-standard-used-by-the-compiler
 #if TF_MINOR_VERSION <= 6
 	#if __cplusplus != 201103L
-	#error "TF < 2.7 cannot be linked when not using C++11"
+	#error "TF < v2.7 cannot be linked when not using C++11"
 	#endif
 #else
 	#if __cplusplus != 201402L
-	#error "TF >= 2.8 cannot be linked when not using C++14"
+	#error "TF >= 2.7 cannot be linked when not using C++14"
 	#endif
 #endif
 
@@ -59,24 +65,21 @@
 // Macros ----------------------------------------------------------------------
 #define DEVICE_VE "VE"
 
-#define REG1_( N, T, C, T0, O, ...)										REGISTER_KERNEL_BUILDER(Name(N).Device(DEVICE_VE).TypeConstraint<T0>(T) C, O<T0, __VA_ARGS__>)
-#define REG2_( N, T, C, T0, T1, O, ...)									REG1_(N, T, C, T0, O, __VA_ARGS__); REG1_(N, T, C, T1, O, __VA_ARGS__)
-#define REG3_( N, T, C, T0, T1, T2, O, ...)								REG1_(N, T, C, T0, O, __VA_ARGS__); REG2_(N, T, C, T1, T2, O, __VA_ARGS__)
-#define REG4_( N, T, C, T0, T1, T2, T3, O, ...)							REG1_(N, T, C, T0, O, __VA_ARGS__); REG3_(N, T, C, T1, T2, T3, O, __VA_ARGS__)
-#define REG5_( N, T, C, T0, T1, T2, T3, T4, O, ...)						REG1_(N, T, C, T0, O, __VA_ARGS__); REG4_(N, T, C, T1, T2, T3, T4, O, __VA_ARGS__)
-#define REG6_( N, T, C, T0, T1, T2, T3, T4, T5, O, ...)					REG1_(N, T, C, T0, O, __VA_ARGS__); REG5_(N, T, C, T1, T2, T3, T4, T5, O, __VA_ARGS__)
-#define REG7_( N, T, C, T0, T1, T2, T3, T4, T5, T6, O, ...)				REG1_(N, T, C, T0, O, __VA_ARGS__); REG6_(N, T, C, T1, T2, T3, T4, T5, T6, O, __VA_ARGS__)
-#define REG8_( N, T, C, T0, T1, T2, T3, T4, T5, T6, T7, O, ...)			REG1_(N, T, C, T0, O, __VA_ARGS__); REG7_(N, T, C, T1, T2, T3, T4, T5, T6, T7, O, __VA_ARGS__)
-#define REG9_( N, T, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, O, ...)		REG1_(N, T, C, T0, O, __VA_ARGS__); REG8_(N, T, C, T1, T2, T3, T4, T5, T6, T7, T8, O, __VA_ARGS__)
-#define REG10_(N, T, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, O, ...)	REG1_(N, T, C, T0, O, __VA_ARGS__); REG9_(N, T, C, T1, T2, T3, T4, T5, T6, T7, T8, T9, O, __VA_ARGS__)
+#define REG1_( N, T, C, O, T0, ...)										REGISTER_KERNEL_BUILDER(Name(N).Device(DEVICE_VE).TypeConstraint<T0>(T) C, O<T0, __VA_ARGS__>)
+#define REG2_( N, T, C, O, T0, T1, ...)									REG1_(N, T, C, O, T0, __VA_ARGS__); REG1_(N, T, C, O, T1, __VA_ARGS__)
+#define REG3_( N, T, C, O, T0, T1, T2, ...)								REG1_(N, T, C, O, T0, __VA_ARGS__); REG2_(N, T, C, O, T1, T2, __VA_ARGS__)
+#define REG4_( N, T, C, O, T0, T1, T2, T3, ...)							REG1_(N, T, C, O, T0, __VA_ARGS__); REG3_(N, T, C, O, T1, T2, T3, __VA_ARGS__)
+#define REG5_( N, T, C, O, T0, T1, T2, T3, T4, ...)						REG1_(N, T, C, O, T0, __VA_ARGS__); REG4_(N, T, C, O, T1, T2, T3, T4, __VA_ARGS__)
+#define REG6_( N, T, C, O, T0, T1, T2, T3, T4, T5, ...)					REG1_(N, T, C, O, T0, __VA_ARGS__); REG5_(N, T, C, O, T1, T2, T3, T4, T5, __VA_ARGS__)
+#define REG7_( N, T, C, O, T0, T1, T2, T3, T4, T5, T6, ...)				REG1_(N, T, C, O, T0, __VA_ARGS__); REG6_(N, T, C, O, T1, T2, T3, T4, T5, T6, __VA_ARGS__)
+#define REG8_( N, T, C, O, T0, T1, T2, T3, T4, T5, T6, T7, ...)			REG1_(N, T, C, O, T0, __VA_ARGS__); REG7_(N, T, C, O, T1, T2, T3, T4, T5, T6, T7, __VA_ARGS__)
+#define REG9_( N, T, C, O, T0, T1, T2, T3, T4, T5, T6, T7, T8, ...)		REG1_(N, T, C, O, T0, __VA_ARGS__); REG8_(N, T, C, O, T1, T2, T3, T4, T5, T6, T7, T8, __VA_ARGS__)
+#define REG10_(N, T, C, O, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, ...)	REG1_(N, T, C, O, T0, __VA_ARGS__); REG9_(N, T, C, O, T1, T2, T3, T4, T5, T6, T7, T8, T9, __VA_ARGS__)
 
 // -----------------------------------------------------------------------------
 namespace tensorflow {
 	constexpr std::array<DataType, 11> VE_TYPES = {{DT_UINT8, DT_UINT16, DT_INT8, DT_INT16, DT_INT32, DT_UINT32, DT_UINT64, DT_INT64, DT_FLOAT, DT_DOUBLE, DT_BOOL}};
-<<<<<<< HEAD
-=======
 	typedef VEDATensors_handle_struct VEDevice;
->>>>>>> master
 }
 
 //------------------------------------------------------------------------------
@@ -143,6 +146,7 @@ template<typename T> inline VEDATensors_tensor tf2veda	(const ::tensorflow::Tens
 //------------------------------------------------------------------------------
 VEDATensors_handle	handle						(const ::tensorflow::OpKernelContext* ctx);
 void				init_binary					(void);
+void				init_broadcast_ops			(void);
 void				init_constant_op			(void);
 void				init_fill					(void);
 void				init_function_ops			(void);

@@ -1,16 +1,25 @@
 # VEDA TensorFlow
 
-VEDA TensorFlow is a library to add device support for the NEC SX-Aurora TSUBASA into TensorFlow using the Pluggable Device API.
+VEDA TensorFlow is a library to add device support for the NEC SX-Aurora TSUBASA
+into TensorFlow using the Pluggable Device API.
 
 ## Release Notes
 <table>
 <tr><th>Version</th><th>Comment</th></tr>
 
+<tr><td>v4</td><td>
+<ul>
+	<li>Added TF v2.9.* support</li>
+	<li>Added BroadcastTo operation</li>
+	<li>Increased <code>host_memory_allocate</code> alignment to be 64, as lower values keep failing in <code>isAligned()</code></li>
+</ul>
+</td></tr>
+
 <tr><td>v3</td><td>
 <ul>
 	<li>Bugfixes for loss functions</li>
 	<li>Added missing optimizers: SGD, Adadelta, Adagrad, Adam, and Adamax</li>
-	<li>Fixed possible segfault in PluggableDevice host_memory_allocate</li>
+	<li>Fixed possible segfault in PluggableDevice <code>host_memory_allocate</code></li>
 </ul>
 </td></tr>
 

@@ -32,7 +32,7 @@ struct Fill : public OpKernel {
 #include "__ns.h"
 //------------------------------------------------------------------------------
 void init_fill(void) {
-	#define Fill(N,  I)	REG10_(N, "T", .TypeConstraint<I>("index_type").HostMemory("dims"), uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::Fill, I)
+	#define Fill(N,  I)	REG10_(N, "T", .TypeConstraint<I>("index_type").HostMemory("dims"), ::tensorflow::Fill, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, I)
 	Fill("Fill", int32_t);
 	Fill("Fill", int64_t);
 }

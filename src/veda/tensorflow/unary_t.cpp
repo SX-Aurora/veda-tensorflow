@@ -25,7 +25,7 @@ struct UnaryT : public OpKernel {
 #include "__ns.h"
 //------------------------------------------------------------------------------
 void init_unary_t(void) {
-	#define UnaryT(N, O) REG10_(N, "T",, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::UnaryT, O)
+	#define UnaryT(N, O) REG10_(N, "T",, ::tensorflow::UnaryT, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, O)
 	UnaryT("Sqrt",	VEDA_TENSORS_UNARY_SQRT);
 	UnaryT("Abs",	VEDA_TENSORS_UNARY_ABS);
 	UnaryT("Rsqrt",	VEDA_TENSORS_UNARY_RSQRT);

@@ -35,7 +35,7 @@ struct UnaryTTUpdate : public OpKernel {
 #include "__ns.h"
 //------------------------------------------------------------------------------
 void init_unary_tt_update(void) {
-	#define UnaryTTUpdate(N, O)	REG10_(N, "dtype",, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, ::tensorflow::UnaryTTUpdate, O)
+	#define UnaryTTUpdate(N, O)	REG10_(N, "dtype",, ::tensorflow::UnaryTTUpdate, uint8_t, uint16_t, uint32_t, uint64_t, int8_t, int16_t, int32_t, int64_t, float, double, O)
 	UnaryTTUpdate("AssignAddVariableOp",	VEDA_TENSORS_UNARY_ADD);
 	UnaryTTUpdate("AssignSubVariableOp",	VEDA_TENSORS_UNARY_ADD);
 }

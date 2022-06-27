@@ -19,6 +19,7 @@ extern "C" void TF_InitKernel(void) {
 	L_TRACE(">> TF_InitKernel");
 
 	init_binary();
+	init_broadcast_ops();
 	init_constant_op();
 	init_fill();
 	init_function_ops();
