@@ -81,7 +81,7 @@ extern "C" void SE_InitPlugin(SE_PlatformRegistrationParams* params, TF_Status* 
 
 	params->platform->name							= "NEC_VECTOR_ENGINE";
 	params->platform->type							= "VE";
-	params->platform->supports_unified_memory		= true;
+	params->platform->supports_unified_memory		= false;
 	params->platform->use_bfc_allocator				= false;
 
 	params->platform_fns->create_device				= &create_device;

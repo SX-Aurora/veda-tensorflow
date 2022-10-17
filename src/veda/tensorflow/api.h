@@ -21,9 +21,13 @@
 	#if __cplusplus != 201103L
 	#error "TF < v2.7 cannot be linked when not using C++11"
 	#endif
-#else
+#elif TF_MINOR_VERSION <= 9
 	#if __cplusplus != 201402L
 	#error "TF >= 2.7 cannot be linked when not using C++14"
+	#endif
+#else
+	#if __cplusplus != 201703L
+	#error "TF >= 2.10 cannot be linked when not using C++17"
 	#endif
 #endif
 

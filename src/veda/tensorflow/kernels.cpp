@@ -4,7 +4,13 @@
 //------------------------------------------------------------------------------
 VEDATensors_handle handle(const ::tensorflow::OpKernelContext* ctx) {
 	VEDATensors_handle hnd;
-	CVEDA(veda_tensors_get_handle_by_id(&hnd, ctx->device()->tensorflow_gpu_device_info()->gpu_id));
+	CVEDA(veda_tensors_get_handle_by_id(&hnd, ctx->device()->
+#if TF_MINOR_VERSION >= 10
+		tensorflow_accelerator_device_info
+#else
+		tensorflow_gpu_device_info
+#endif		
+	()->gpu_id));
 	return hnd;
 }
 

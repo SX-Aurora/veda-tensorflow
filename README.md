@@ -7,9 +7,14 @@ into TensorFlow using the Pluggable Device API.
 <table>
 <tr><th>Version</th><th>Comment</th></tr>
 
-<tr><td>v4</td><td>
+<tr><td>v5</td><td>
 <ul>
 	<li>Added TF v2.9.* support</li>
+</ul>
+</td></tr>
+
+<tr><td>v4</td><td>
+<ul>
 	<li>Added BroadcastTo operation</li>
 	<li>Increased <code>host_memory_allocate</code> alignment to be 64, as lower values keep failing in <code>isAligned()</code></li>
 </ul>
