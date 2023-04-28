@@ -12,6 +12,11 @@ public:
 				.ok()) {
 		relax_constraints_ = false;
 		}
+	#if TF_MINOR_VERSION >= 12
+		if (c->HasAttr("validate_shape")) {
+			OP_REQUIRES_OK(c, c->GetAttr("validate_shape", &validate_shape_));
+		}
+	#endif
 	}
 
 	void Compute(OpKernelContext* context) override {
@@ -36,7 +41,7 @@ public:
 									*ptr = new Var(dtype_);
 									*(*ptr)->tensor() = value;
 									(*ptr)->is_initialized = true;
-									return Status::OK();
+									return OkStatus();
 									}));
 		mutex_lock ml(*variable->mu());
 		// (variable->tensor()->dtype() == DT_INVALID && !variable->is_initialized)
@@ -54,6 +59,19 @@ public:
 						"Trying to assign variable with wrong dtype. Expected ",
 						DataTypeString(variable->tensor()->dtype()), " got ",
 						DataTypeString(dtype_)));
+	#if TF_MINOR_VERSION >= 12
+		if (validate_shape_) {
+			OP_REQUIRES(
+				context,
+				(!variable->is_initialized ||
+				variable->tensor()->shape().IsSameSize(value.shape())),
+				errors::InvalidArgument(
+					"Trying to assign to variable with tensor with wrong shape."
+					" Expected ",
+					variable->tensor()->shape().DebugString(), " got ",
+					value.shape().DebugString()));
+		}
+	#endif
 		if (variable->copy_on_read_mode.load()) {
 			AllocatorAttributes attr;
 			attr.set_gpu_compatible(true);
@@ -73,6 +91,9 @@ public:
 private:
 	DataType dtype_;
 	bool relax_constraints_;
+#if TF_MINOR_VERSION >= 12
+	bool validate_shape_ = false;
+#endif
 };
 
 //------------------------------------------------------------------------------
@@ -130,7 +151,7 @@ static Status CopyVariable(int output_idx, OpKernelContext* ctx, const Tensor* t
 			return errors::Internal("Unsupported dtype", t->dtype());
 		}
 	}
-	return Status::OK();
+	return OkStatus();
 }
 
 //------------------------------------------------------------------------------
@@ -240,15 +261,22 @@ VarHandleOp::VarHandleOp(OpKernelConstruction* context) : OpKernel(context) {
 //------------------------------------------------------------------------------
 void VarHandleOp::Compute(OpKernelContext* ctx) {
 	if(is_anonymous_) {
-		AllocatorAttributes attr;
-		attr.set_on_host(true);
-		Tensor handle;
-		OP_REQUIRES_OK(ctx, ctx->allocate_temp(DT_RESOURCE, TensorShape({}), &handle, attr));
-		handle.scalar<ResourceHandle>()() = MakeResourceHandle<Var>(
-			ctx, container_, name_,
+		Var* resource = new Var(dtype_and_shape_.dtype);
+		ResourceMgr* mgr = ctx->resource_manager();
+		ResourceHandle handle = ResourceHandle::MakeRefCountingHandle<Var>(
+			resource, ctx->device()->name(),
 			std::vector<DtypeAndPartialTensorShape>{dtype_and_shape_},
 			ctx->stack_trace());
-		ctx->set_output(0, handle);
+		OP_REQUIRES_OK(ctx, mgr->CreateUnowned<Var>(handle.container(), handle.name(), resource));
+
+		AllocatorAttributes attr;
+		attr.set_on_host(true);
+		Tensor tensor;
+		OP_REQUIRES_OK(ctx, ctx->allocate_temp(DT_RESOURCE, TensorShape({}), &tensor, attr));
+
+		tensor.scalar<ResourceHandle>()() = std::move(handle);
+
+		ctx->set_output(0, tensor);
 	} else {
 #if TF_MINOR_VERSION < 8
 		auto& const_tensor_ = resource_;
@@ -266,13 +294,13 @@ void init_resource_variable_ops(void) {
 	using namespace ::tensorflow;
 
 	#define REGISTER_TYPES(FUNC) FUNC(uint8_t) FUNC(uint16_t) FUNC(uint32_t) FUNC(uint64_t) FUNC(int8_t) FUNC(int16_t) FUNC(int32_t) FUNC(int64_t) FUNC(float) FUNC(double)
-	#define REGISTER_AssignVariableOp(type)				REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype"), AssignVariableOp<VEDevice, type>);
+	#define REGISTER_AssignVariableOp(type)		REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype").HostMemory("resource"), AssignVariableOp<VEDevice, type>);
 
 	REGISTER_TYPES(REGISTER_AssignVariableOp)
 
 	REGISTER_KERNEL_BUILDER(Name("DestroyResourceOp")	.Device(DEVICE_VE).HostMemory("resource"),		DestroyResourceOp);
 	REGISTER_KERNEL_BUILDER(Name("ReadVariableOp")		.Device(DEVICE_VE).HostMemory("resource"),		ReadVariableOp);
-	REGISTER_KERNEL_BUILDER(Name("VarHandleOp")			.Device(DEVICE_VE).HostMemory("resource"),		VarHandleOp);
+	REGISTER_KERNEL_BUILDER(Name("VarHandleOp")			.Device(DEVICE_VE).HostMemory("resource"),		VarHandleOp); // TODO: .TypeConstraint<type>("dtype") ?
 	REGISTER_KERNEL_BUILDER(Name("_ReadVariablesOp")	.Device(DEVICE_VE).HostMemory("resources"),		ReadVariablesOp);
 }
 

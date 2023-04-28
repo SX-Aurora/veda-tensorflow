@@ -5,7 +5,7 @@ namespace tensorflow {
 static NodeDef StripTensorDataFromNodeDef(OpKernelConstruction* ctx) {
 	const NodeDef& original = ctx->def();
 	if(std::is_base_of<protobuf::Message, NodeDef>()) {
-		DCHECK_EQ(reinterpret_cast<const protobuf::Message*>(&original)->GetDescriptor()->field_count(), 6)
+		DCHECK_EQ(reinterpret_cast<const protobuf::Message*>(&original)->GetDescriptor()->field_count(), 7)
 			<< "The NodeDef format has changed, and the attr-stripping code may "
 				"need to be updated.";
 	}

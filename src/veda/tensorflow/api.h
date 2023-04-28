@@ -23,7 +23,7 @@
 	#endif
 #elif TF_MINOR_VERSION <= 9
 	#if __cplusplus != 201402L
-	#error "TF >= 2.7 cannot be linked when not using C++14"
+	#error "TF >= 2.7 && < 2.10 cannot be linked when not using C++14"
 	#endif
 #else
 	#if __cplusplus != 201703L
@@ -39,7 +39,7 @@
 #define CVEDA(...) veda::tensorflow::check(__VA_ARGS__, __FILE__, __LINE__)
 
 // BUGFIX: https://stackoverflow.com/questions/55958530/custom-resource-in-tensorflow
-#ifndef NDEBUG
+#if !defined(NDEBUG) && TF_MINOR_VERSION < 11
 #define NDEBUG 1
 #include <tensorflow/core/platform/default/logging.h>
 #undef NDEBUG
@@ -99,8 +99,12 @@ struct SP_Timer_st {
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
-#define HANDLE(DEVICE)	((VEDATensors_handle)DEVICE->device_handle)
-#define GUARD(DEVICE)	veda::tensorflow::Guard __guard__(HANDLE(DEVICE))
+#define TRY(...)\
+	try {\
+		__VA_ARGS__\
+	} catch(const veda::cpp::Exception& e) {\
+		THROW("%s @ %s (%i)", e.what(), e.file(), e.line());\
+	}
 
 //------------------------------------------------------------------------------
 inline void check(VEDAresult res, const char* file, const int line) {
@@ -110,18 +114,6 @@ inline void check(VEDAresult res, const char* file, const int line) {
 		THROWAT(L_MODULE, file, line, "VEDA_ERROR: %s", err);
 	}
 }
-
-//------------------------------------------------------------------------------
-struct Guard {
-	inline Guard(VEDATensors_handle hnd) {
-		CVEDA(vedaCtxPushCurrent(hnd->ctx));
-	}
-
-	inline ~Guard(void) {
-		VEDAcontext ctx;
-		CVEDA(vedaCtxPopCurrent(&ctx));
-	}
-};
 
 //------------------------------------------------------------------------------
 template<typename T> VEDATensors_dtype dtype(void);
@@ -149,6 +141,7 @@ template<typename T> inline VEDATensors_tensor tf2veda	(const ::tensorflow::Tens
 
 //------------------------------------------------------------------------------
 VEDATensors_handle	handle						(const ::tensorflow::OpKernelContext* ctx);
+VEDAdevice			device						(const ::tensorflow::OpKernelContext* ctx);
 void				init_binary					(void);
 void				init_broadcast_ops			(void);
 void				init_constant_op			(void);

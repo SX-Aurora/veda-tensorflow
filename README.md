@@ -3,9 +3,25 @@
 VEDA TensorFlow is a library to add device support for the NEC SX-Aurora TSUBASA
 into TensorFlow using the Pluggable Device API.
 
+[![Github](https://img.shields.io/github/v/tag/sx-aurora/veda-tensorflow?display_name=tag&sort=semver)](https://github.com/sx-aurora/veda)
+[![PyPI](https://img.shields.io/pypi/v/veda-tensorflow)](https://pypi.org/project/veda-tensorflow)
+[![License](https://img.shields.io/pypi/l/veda-tensorflow)](https://pypi.org/project/veda-tensorflow)
+![Python Versions](https://img.shields.io/pypi/pyversions/veda-tensorflow)
+![Linux](https://svgshare.com/i/Zhy.svg)
+![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)
+![Maintenance](https://img.shields.io/pypi/dm/veda-tensorflow)
+
 ## Release Notes
 <table>
 <tr><th>Version</th><th>Comment</th></tr>
+
+<tr><td>v6</td><td>
+<ul>
+	<li>Added TF v2.11.* support</li>
+	<li>Added TF v2.10.* support</li>
+	<li>Upgraded to VEDA CPP API</li>
+</ul>
+</td></tr>
 
 <tr><td>v5</td><td>
 <ul>

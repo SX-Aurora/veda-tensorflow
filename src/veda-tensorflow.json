@@ -7,6 +7,7 @@
 	"author":			"__GIT__",
 	"author-email":		"__GIT__",
 	"license":			"3 BSD-License",
+	"license-file":		"tensorflow-plugins/VEDA-TENSORFLOW-LICENSE",
 	"requires-python":	">=3.7",
 	"download-url":		"https://github.com/sx-aurora/veda-tensorflow/tags",
 	"classifier": [
@@ -20,9 +21,9 @@
 		"tensorflow-plugins/libveda-tensorflow.so"
 	],
 	"requires-dist": [
-		"veda (>= @VEDA_VERSION_MIN@, < @VEDA_VERSION_MAX@)",
-		"tungl (>= @Tungl_VERSION_MIN@, < @Tungl_VERSION_MAX@)",
-		"veda-tensors (>= @VEDATensors_VERSION_MIN@, < @VEDATensors_VERSION_MAX@)",
-		"tensorflow == @TENSORFLOW_VERSION@"
+		"veda (>= @VEDA_VERSION@, < @VEDA_VERSION_NEXT_MAJOR@)",
+		"tungl (>= @Tungl_VERSION@, < @Tungl_VERSION_NEXT_MINOR@)",
+		"veda-tensors (>= @VEDATensors_VERSION@, < @VEDATensors_VERSION_NEXT_MINOR@)",
+		"tensorflow==@TENSORFLOW_VERSION@"
 	]
 }

@@ -1,12 +1,12 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
 
-PROJECT(VEDATensorFlow VERSION 5 LANGUAGES C CXX)
+PROJECT(VEDATensorFlow VERSION 6 LANGUAGES C CXX)
 
-FIND_PACKAGE(Illyrian 0.2.0 REQUIRED)
+FIND_PACKAGE(Illyrian 0.3.0 REQUIRED)
 
 ILLYRIAN_FIND_PACKAGE		(Tungl			VERSION 0.1.1 REQUIRED PYTHON "tungl/cmake"			PATHS "/usr/local/nle/tungl/cmake")
-ILLYRIAN_FIND_PACKAGE		(VEDA			VERSION 1.3.3 REQUIRED PYTHON "veda/cmake"			PATHS "/usr/local/ve/veda/cmake")
-ILLYRIAN_FIND_PACKAGE		(VEDATensors	VERSION 0.1.1 REQUIRED PYTHON "veda/tensors/cmake"	PATHS "/usr/local/ve/veda-tensors/cmake")
+ILLYRIAN_FIND_PACKAGE		(VEDA			VERSION 2.0.1 REQUIRED PYTHON "veda/cmake"			PATHS "/usr/local/ve/veda/cmake")
+ILLYRIAN_FIND_PACKAGE		(VEDATensors	VERSION 0.1.4 REQUIRED PYTHON "veda/tensors/cmake"	PATHS "/usr/local/ve/veda-tensors/cmake")
 ILLYRIAN_FIND_PYTHON_FILE	(TENSORFLOW_LIBRARY tensorflow "libtensorflow_framework.so.2" REQUIRED)
 
 MARK_AS_ADVANCED(TENSORFLOW_LIBRARY)

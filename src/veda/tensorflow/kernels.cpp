@@ -2,15 +2,20 @@
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
-VEDATensors_handle handle(const ::tensorflow::OpKernelContext* ctx) {
-	VEDATensors_handle hnd;
-	CVEDA(veda_tensors_get_handle_by_id(&hnd, ctx->device()->
+VEDAdevice device(const ::tensorflow::OpKernelContext* ctx) {
+	return ctx->device()->
 #if TF_MINOR_VERSION >= 10
 		tensorflow_accelerator_device_info
 #else
 		tensorflow_gpu_device_info
 #endif		
-	()->gpu_id));
+	()->gpu_id;
+}
+
+//------------------------------------------------------------------------------
+VEDATensors_handle handle(const ::tensorflow::OpKernelContext* ctx) {
+	VEDATensors_handle hnd;
+	CVEDA(veda_tensors_get_handle_by_id(&hnd, device(ctx)));
 	return hnd;
 }
 

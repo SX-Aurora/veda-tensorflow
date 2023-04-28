@@ -1,4 +1,5 @@
 #include <veda/tensorflow/api.h>
+#include <veda/cpp/api.h>
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
@@ -17,7 +18,9 @@ static void create_timer_fns(const SP_Platform* platform, SP_TimerFns* timer, TF
 
 //------------------------------------------------------------------------------
 static void get_device_count(const SP_Platform* platform, int* device_count, TF_Status* status) {
-	CVEDA(vedaDeviceGetCount(device_count));
+	TRY(
+		*device_count = veda::Device::count();
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
@@ -31,10 +34,7 @@ static	void destroy_timer_fns		(const SP_Platform* platform, SP_TimerFns* timer_
 
 //------------------------------------------------------------------------------
 static void create_device(const SP_Platform* platform, SE_CreateDeviceParams* params, TF_Status* status) {
-	VEDATensors_handle handle;
-	CVEDA(veda_tensors_get_handle_by_id(&handle, params->ordinal));
-
-	params->device->device_handle	= handle;
+	params->device->device_handle	= 0;
 	params->device->hardware_name	= "SX-Aurora TSUBASA";
 	params->device->device_vendor	= "NEC";
 	params->device->pci_bus_id		= "0000:00:00.0"; // TODO:
@@ -81,8 +81,11 @@ extern "C" void SE_InitPlugin(SE_PlatformRegistrationParams* params, TF_Status* 
 
 	params->platform->name							= "NEC_VECTOR_ENGINE";
 	params->platform->type							= "VE";
-	params->platform->supports_unified_memory		= false;
-	params->platform->use_bfc_allocator				= false;
+	params->platform->supports_unified_memory		= 0;
+	params->platform->use_bfc_allocator				= 0;
+#if TF_MINOR_VERSION > 8
+	params->platform->force_memory_growth			= 0;
+#endif
 
 	params->platform_fns->create_device				= &create_device;
 	params->platform_fns->create_device_fns			= &create_device_fns;

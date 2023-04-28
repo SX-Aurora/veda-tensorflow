@@ -14,7 +14,7 @@ void ArgOp::Compute(OpKernelContext* ctx) {
 	const Tensor* val;
 
 	auto validate_type = [this](const Tensor& val) {
-		if(val.dtype() == dtype_)	return Status::OK();
+		if(val.dtype() == dtype_)	return Status();
 		else						return errors::InvalidArgument("Type mismatch: actual ", DataTypeString(val.dtype()), " vs. expect ", DataTypeString(dtype_));
 	};
 

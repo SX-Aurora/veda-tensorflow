@@ -1,4 +1,5 @@
 #include <veda/tensorflow/api.h>
+#include <veda/cpp/api.h>
 #include <malloc.h>
 #include <mutex>
 #include <chrono>
@@ -14,6 +15,9 @@ struct SP_Event_st {
 #define LOCK(event) std::lock_guard<std::mutex> __lock__ (event->mutex)
 
 #include "__ns.h"
+//------------------------------------------------------------------------------
+using veda::Device;
+
 //------------------------------------------------------------------------------
 static void create_event(const SP_Device* device, SP_Event* event, TF_Status* status) {
 	*event = new SP_Event_st;
@@ -32,9 +36,7 @@ static SE_EventStatus get_event_status(const SP_Device* device, SP_Event event) 
 }
 
 //------------------------------------------------------------------------------
-static void record_event_helper(VEDAstream stream, VEDAresult result, void* args) {
-	auto event	= (SP_Event)args;
-
+static void record_event_helper(SP_Event event) {
 	{
 		LOCK(event);
 		ASSERT(event->status == SE_EVENT_PENDING);
@@ -54,8 +56,10 @@ static void record_event(const SP_Device* device, SP_Stream stream, SP_Event eve
 		event->status = SE_EVENT_PENDING;
 	}
 
-	GUARD(device);
-	CVEDA(vedaStreamAddCallback(stream->stream, record_event_helper, event, 0));
+	TRY(
+		veda::cpp::HostFunction<void, SP_Event> func(device->ordinal, record_event_helper);
+		func[stream->stream](event);
+	)
 }
 
 //------------------------------------------------------------------------------
@@ -69,18 +73,19 @@ static void wait_for_event(const SP_Device* const device, SP_Stream stream, SP_E
 
 //------------------------------------------------------------------------------
 static void allocate(const SP_Device* device, uint64_t size, int64_t memory_space, SP_DeviceMemoryBase* mem) {
-	GUARD(device);
-	VEDAdeviceptr ptr;
-	CVEDA(vedaMemAllocAsync(&ptr, size, 0));
-	mem->opaque		= ptr;
-	mem->size		= size;
-	mem->payload	= 0;
+	TRY(
+		Device dev(device->ordinal);
+		mem->opaque		= dev.allocRaw<>(size);
+		mem->size		= size;
+		mem->payload	= 0;
+	)
 }
 
 //------------------------------------------------------------------------------
 static void deallocate(const SP_Device* device, SP_DeviceMemoryBase* memory) {
-	// No guard needed, MemFreeAsync automatically selects the correct device.
-	CVEDA(vedaMemFreeAsync((VEDAdeviceptr)memory->opaque, 0));
+	TRY(
+		Device(device->ordinal).free((VEDAdeviceptr)memory->opaque);
+	)
 }
 
 //------------------------------------------------------------------------------
@@ -89,7 +94,7 @@ static void* host_memory_allocate(const SP_Device* device, uint64_t size) {
 	void* ptr = 0;
 	if(size) {
 		posix_memalign(&ptr, 64, size);
-		L_TRACE("[ve:%i] %p = malloc(%llu)", device->ordinal, ptr, size);
+		L_TRACE("[ve:%i] %p = host_memory_allocate(%llu)", device->ordinal, ptr, size);
 	}
 	return ptr;
 }
@@ -101,31 +106,17 @@ static void host_memory_deallocate(const SP_Device* device, void* ptr) {
 }
 
 //------------------------------------------------------------------------------
-static void* unified_memory_allocate(const SP_Device* device, uint64_t bytes) {
-	GUARD(device);
-	VEDAdeviceptr ptr = 0;
-	CVEDA(vedaMemAllocAsync(&ptr, bytes, 0));
-	return (void*)ptr;
-}
-
-//------------------------------------------------------------------------------
-static void unified_memory_deallocate(const SP_Device* device, void* location) {
-	// No guard needed. MemFree automatically selects the correct device.
-	CVEDA(vedaMemFreeAsync((VEDAdeviceptr)location, 0));
-}
-
-//------------------------------------------------------------------------------
 static TF_Bool get_allocator_stats(const SP_Device* device, SP_AllocatorStats* stats) {
 	return 1; // TODO
 }
 
 //------------------------------------------------------------------------------
 static TF_Bool device_memory_usage(const SP_Device* device, int64_t* free, int64_t* total) {
-	GUARD(device);
-	size_t _free, _total;
-	CVEDA(vedaMemGetInfo(&_free, &_total));
-	*free	= (int64_t)_free;
-	*total	= (int64_t)_total;
+	TRY(
+		Device dev(device->ordinal);
+		*total	= (int64_t)dev.totalMem();
+		*free	= (*total) - ((int64_t)dev.usedMem());
+	)
 	return 1;
 }
 
@@ -133,14 +124,11 @@ static TF_Bool device_memory_usage(const SP_Device* device, int64_t* free, int64
 static void create_stream(const SP_Device* device, SP_Stream* stream, TF_Status* status) {
 	static SP_Stream_st s_stream = {0};
 	*stream = &s_stream;
-	//*stream = new SP_Stream_st;
-	//(*stream)->stream = 0;
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void destroy_stream(const SP_Device* device, SP_Stream stream) {
-	//delete stream;
 }
 
 //------------------------------------------------------------------------------
@@ -151,56 +139,70 @@ static void create_stream_dependency(const SP_Device* device, SP_Stream dependen
 
 //------------------------------------------------------------------------------
 static void get_stream_status(const SP_Device* device, SP_Stream stream, TF_Status* status) {
-	GUARD(device);
-	switch(vedaStreamQuery(stream->stream)) {
-		case VEDA_ERROR_VEO_STATE_UNKNOWN:	TF_SetStatus(status, TF_UNKNOWN ,	"VEDA_ERROR_VEO_STATE_UNKNOWN");	return;
-		case VEDA_ERROR_VEO_STATE_RUNNING:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_RUNNING");	return;
-		case VEDA_ERROR_VEO_STATE_SYSCALL:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_SYSCALL");	return;
-		case VEDA_ERROR_VEO_STATE_BLOCKED:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_BLOCKED");	return;
-		case VEDA_SUCCESS:					TF_SetStatus(status, TF_OK,			"VEDA_SUCCESS");					return;
-	}
-	FAIL();
+	TRY(
+		Device dev(device->ordinal);
+		switch(dev.query(stream->stream)) {
+			case VEDA_ERROR_VEO_STATE_UNKNOWN:	TF_SetStatus(status, TF_UNKNOWN ,	"VEDA_ERROR_VEO_STATE_UNKNOWN");	return;
+			case VEDA_ERROR_VEO_STATE_RUNNING:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_RUNNING");	return;
+			case VEDA_ERROR_VEO_STATE_SYSCALL:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_SYSCALL");	return;
+			case VEDA_ERROR_VEO_STATE_BLOCKED:	TF_SetStatus(status, TF_OK,			"VEDA_ERROR_VEO_STATE_BLOCKED");	return;
+			case VEDA_SUCCESS:					TF_SetStatus(status, TF_OK,			"VEDA_SUCCESS");					return;
+		}
+		FAIL();
+	)
 }
 
 //------------------------------------------------------------------------------
 static void memcpy_dtoh(const SP_Device* device, SP_Stream stream, void* host_dst, const SP_DeviceMemoryBase* device_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyDtoHAsync(host_dst, (VEDAdeviceptr)device_src->opaque, size, stream->stream));
+	TRY(
+		Device(device->ordinal).memcpy(host_dst, (VEDAdeviceptr)device_src->opaque, size, stream->stream);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void memcpy_htod(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* device_dst, const void* host_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyHtoDAsync((VEDAdeviceptr)device_dst->opaque, host_src, size, stream->stream));
+	TRY(
+		Device(device->ordinal).memcpy((VEDAdeviceptr)device_dst->opaque, host_src, size, stream->stream);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void memcpy_dtod(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* device_dst, const SP_DeviceMemoryBase* device_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyDtoDAsync((VEDAdeviceptr)device_dst->opaque, (VEDAdeviceptr)device_src->opaque, size, stream->stream));
+	TRY(
+		Device(device->ordinal).memcpy((VEDAdeviceptr)device_dst->opaque, (VEDAdeviceptr)device_src->opaque, size, stream->stream);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void sync_memcpy_dtoh(const SP_Device* device, void* host_dst, const SP_DeviceMemoryBase* device_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyDtoH(host_dst, (VEDAdeviceptr)device_src->opaque, size));
+	TRY(
+		Device dev(device->ordinal);
+		dev.memcpy(host_dst, (VEDAdeviceptr)device_src->opaque, size);
+		dev.sync();
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void sync_memcpy_htod(const SP_Device* device, SP_DeviceMemoryBase* device_dst, const void* host_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyHtoD((VEDAdeviceptr)device_dst->opaque, host_src, size));
+	TRY(
+		Device dev(device->ordinal);
+		dev.memcpy((VEDAdeviceptr)device_dst->opaque, host_src, size);
+		dev.sync();
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void sync_memcpy_dtod(const SP_Device* device, SP_DeviceMemoryBase* device_dst, const SP_DeviceMemoryBase* device_src, uint64_t size, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaMemcpyDtoD((VEDAdeviceptr)device_dst->opaque, (VEDAdeviceptr)device_src->opaque, size));
+	TRY(
+		Device dev(device->ordinal);
+		dev.memcpy((VEDAdeviceptr)device_dst->opaque, (VEDAdeviceptr)device_src->opaque, size);
+		dev.sync();
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
@@ -212,34 +214,26 @@ static void block_host_for_event(const SP_Device* device, SP_Event event, TF_Sta
 
 //------------------------------------------------------------------------------
 static void block_host_until_done(const SP_Device* device, SP_Stream stream, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaStreamSynchronize(stream->stream));
+	TRY(
+		Device(device->ordinal).sync(stream->stream);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void synchronize_all_activity(const SP_Device* device, TF_Status* status) {
-	GUARD(device);
-	CVEDA(vedaCtxSynchronize());
+	TRY(
+		Device(device->ordinal).sync();
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
-typedef std::tuple<SE_StatusCallbackFn, void*> host_callback_t;
-
-//------------------------------------------------------------------------------
-static void host_callback_helper(VEDAstream stream, VEDAresult result, void* args) {
-	auto data	= (host_callback_t*)args;
-	auto func	= std::get<0>(*data);
-	auto arg	= std::get<1>(*data);
-	delete data;
-	func(arg, 0);
-}
-
-//------------------------------------------------------------------------------
 static TF_Bool host_callback(const SP_Device* device, SP_Stream stream, SE_StatusCallbackFn callback_fn, void* callback_arg) {
-	GUARD(device);
-	CVEDA(vedaStreamAddCallback(stream->stream, host_callback_helper, new host_callback_t(callback_fn, callback_arg), 0));
+	TRY(
+		veda::cpp::HostFunction<void, void*, TF_Status*> func(device->ordinal, callback_fn);
+		func[stream->stream](callback_arg, (TF_Status*)0);
+	)
 	return true;
 }
 
@@ -279,19 +273,25 @@ static void stop_timer(const SP_Device* device, SP_Stream stream, SP_Timer timer
 //------------------------------------------------------------------------------
 #if TF_MINOR_VERSION >= 7
 static void mem_zero(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint64_t size, TF_Status* status) {
-	CVEDA(vedaMemsetD8Async((VEDAdeviceptr)location->opaque, 0, size, 0));
+	TRY(
+		Device(device->ordinal).memset((VEDAdeviceptr)location->opaque, (int8_t)0, size);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void memset8(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint8_t pattern, uint64_t size, TF_Status* status) {
-	CVEDA(vedaMemsetD8Async((VEDAdeviceptr)location->opaque, pattern, size, 0));
+	TRY(
+		Device(device->ordinal).memset((VEDAdeviceptr)location->opaque, pattern, size);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 
 //------------------------------------------------------------------------------
 static void memset32(const SP_Device* device, SP_Stream stream, SP_DeviceMemoryBase* location, uint32_t pattern, uint64_t size, TF_Status* status) {
-	CVEDA(vedaMemsetD32Async((VEDAdeviceptr)location->opaque, pattern, size, 0));
+	TRY(
+		Device(device->ordinal).memset((VEDAdeviceptr)location->opaque, pattern, size);
+	)
 	TF_SetStatus(status, TF_OK,	"");
 }
 #endif
@@ -326,9 +326,10 @@ void create_stream_executor(const SP_Platform* platform, SE_CreateStreamExecutor
 	params->stream_executor->sync_memcpy_dtoh			= &sync_memcpy_dtoh;
 	params->stream_executor->sync_memcpy_htod			= &sync_memcpy_htod;
 	params->stream_executor->synchronize_all_activity	= &synchronize_all_activity;
-	params->stream_executor->unified_memory_allocate	= &unified_memory_allocate;
-	params->stream_executor->unified_memory_deallocate	= &unified_memory_deallocate;
 	params->stream_executor->wait_for_event				= &wait_for_event;
+
+	// Not Supported: params->stream_executor->unified_memory_allocate
+	// Not Supported: params->stream_executor->unified_memory_deallocate
 
 #if TF_MINOR_VERSION >= 7
 	params->stream_executor->mem_zero					= &mem_zero;
