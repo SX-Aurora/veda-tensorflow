@@ -99,14 +99,6 @@ struct SP_Timer_st {
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
-#define TRY(...)\
-	try {\
-		__VA_ARGS__\
-	} catch(const veda::cpp::Exception& e) {\
-		THROW("%s @ %s (%i)", e.what(), e.file(), e.line());\
-	}
-
-//------------------------------------------------------------------------------
 inline void check(VEDAresult res, const char* file, const int line) {
 	if(__builtin_expect((res != VEDA_SUCCESS), 0)) {
 		const char* err;
@@ -140,6 +132,30 @@ template<typename T> inline VEDATensors_scalar tf2scalar(const ::tensorflow::Ten
 template<typename T> inline VEDATensors_tensor tf2veda	(const ::tensorflow::Tensor& t)	{	return tf2veda<T>(&t);							}
 
 //------------------------------------------------------------------------------
+template<typename T>
+inline typename std::enable_if<sizeof(T) == 1>::type vedaMemset(VEDAdeviceptr out, const T value, const size_t numel) {
+	CVEDA(vedaMemsetD8Async(out, *(uint8_t*)&value, numel, 0));
+}
+
+//------------------------------------------------------------------------------
+template<typename T>
+inline typename std::enable_if<sizeof(T) == 2>::type vedaMemset(VEDAdeviceptr out, const T value, const size_t numel) {
+	CVEDA(vedaMemsetD16Async(out, *(uint16_t*)&value, numel, 0));
+}
+
+//------------------------------------------------------------------------------
+template<typename T>
+inline typename std::enable_if<sizeof(T) == 4>::type vedaMemset(VEDAdeviceptr out, const T value, const size_t numel) {
+	CVEDA(vedaMemsetD32Async(out, *(uint32_t*)&value, numel, 0));
+}
+
+//------------------------------------------------------------------------------
+template<typename T>
+inline typename std::enable_if<sizeof(T) == 8>::type vedaMemset(VEDAdeviceptr out, const T value, const size_t numel) {
+	CVEDA(vedaMemsetD64Async(out, *(uint64_t*)&value, numel, 0));
+}
+
+//------------------------------------------------------------------------------
 VEDATensors_handle	handle						(const ::tensorflow::OpKernelContext* ctx);
 VEDAdevice			device						(const ::tensorflow::OpKernelContext* ctx);
 void				init_binary					(void);
@@ -153,6 +169,20 @@ void				init_training_ops			(void);
 void				init_unary_t				(void);
 void				init_unary_tt				(void);
 void				init_unary_tt_update		(void);
+
+//------------------------------------------------------------------------------
+struct Guard final {
+	inline Guard(const VEDAdevice device) {
+		VEDAcontext ctx = 0;
+		CVEDA(vedaDevicePrimaryCtxRetain(&ctx, device));
+		CVEDA(vedaCtxPushCurrent(ctx));
+	}
+
+	inline ~Guard(void) {
+		VEDAcontext ctx = 0;
+		CVEDA(vedaCtxPopCurrent(&ctx));
+	}
+};
 
 //------------------------------------------------------------------------------
 #include "__ns.h"

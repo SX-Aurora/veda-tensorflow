@@ -1,5 +1,4 @@
 #include <veda/tensorflow/api.h>
-#include <veda/cpp/api.h>
 
 namespace tensorflow {
 //------------------------------------------------------------------------------
@@ -14,7 +13,8 @@ struct Fill final : public OpKernel {
     explicit Fill(OpKernelConstruction* ctx) : OpKernel(ctx) {}
 
     void Compute(OpKernelContext* ctx) override {
-		using namespace veda::tensorflow; 
+		using namespace veda::tensorflow;
+		Guard __guard__(device(ctx));
 
 		ASSERT(ctx->input_memory_type(0) == HOST_MEMORY);
 		ASSERT(ctx->input_memory_type(1) == HOST_MEMORY);
@@ -28,11 +28,7 @@ struct Fill final : public OpKernel {
 	#if TF_MINOR_VERSION > 9
 		if(input_0.NumElements() && input_0.GetMemoryType() == AllocatorMemoryType::kDevice) {
 			dims_ptr = new I[dims.size()];
-			TRY(
-				veda::Device dev(device(ctx));
-				dev.memcpy(dims_ptr, (VEDAdeviceptr)dims.data(), dims.size() * sizeof(I));
-				dev.sync();
-			)
+			CVEDA(vedaMemcpyDtoH(dims_ptr, (VEDAdeviceptr)dims.data(), dims.size() * sizeof(I)));
 		}
 	#endif
 
@@ -55,9 +51,7 @@ struct Fill final : public OpKernel {
 			auto d_out = (VEDAdeviceptr)out->flat<T>().data();
 			auto value = *input_1.flat<T>().data();
 
-			TRY(
-				veda::Device(device(ctx)).memset(d_out, value, out->NumElements(), 0);
-			)
+			vedaMemset<T>(d_out, value, out->NumElements());
 	#if TF_MINOR_VERSION > 9
 		}
 	#endif

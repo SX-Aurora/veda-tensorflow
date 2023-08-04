@@ -41,7 +41,11 @@ public:
 									*ptr = new Var(dtype_);
 									*(*ptr)->tensor() = value;
 									(*ptr)->is_initialized = true;
+		#if TF_MINOR_VERSION > 9
 									return OkStatus();
+		#else
+									return Status::OK();
+		#endif
 									}));
 		mutex_lock ml(*variable->mu());
 		// (variable->tensor()->dtype() == DT_INVALID && !variable->is_initialized)
@@ -151,7 +155,11 @@ static Status CopyVariable(int output_idx, OpKernelContext* ctx, const Tensor* t
 			return errors::Internal("Unsupported dtype", t->dtype());
 		}
 	}
-	return OkStatus();
+	#if TF_MINOR_VERSION > 9
+		return OkStatus();
+	#else
+		return Status::OK();
+	#endif
 }
 
 //------------------------------------------------------------------------------
@@ -261,6 +269,7 @@ VarHandleOp::VarHandleOp(OpKernelConstruction* context) : OpKernel(context) {
 //------------------------------------------------------------------------------
 void VarHandleOp::Compute(OpKernelContext* ctx) {
 	if(is_anonymous_) {
+	#if TF_MINOR_VERSION >= 9
 		Var* resource = new Var(dtype_and_shape_.dtype);
 		ResourceMgr* mgr = ctx->resource_manager();
 		ResourceHandle handle = ResourceHandle::MakeRefCountingHandle<Var>(
@@ -277,6 +286,17 @@ void VarHandleOp::Compute(OpKernelContext* ctx) {
 		tensor.scalar<ResourceHandle>()() = std::move(handle);
 
 		ctx->set_output(0, tensor);
+	#else
+		AllocatorAttributes attr;
+		attr.set_on_host(true);
+		Tensor handle;
+		OP_REQUIRES_OK(ctx, ctx->allocate_temp(DT_RESOURCE, TensorShape({}), &handle, attr));
+		handle.scalar<ResourceHandle>()() = MakeResourceHandle<Var>(
+			ctx, container_, name_,
+			std::vector<DtypeAndPartialTensorShape>{dtype_and_shape_},
+			ctx->stack_trace());
+		ctx->set_output(0, handle);
+	#endif
 	} else {
 #if TF_MINOR_VERSION < 8
 		auto& const_tensor_ = resource_;
@@ -294,13 +314,17 @@ void init_resource_variable_ops(void) {
 	using namespace ::tensorflow;
 
 	#define REGISTER_TYPES(FUNC) FUNC(uint8_t) FUNC(uint16_t) FUNC(uint32_t) FUNC(uint64_t) FUNC(int8_t) FUNC(int16_t) FUNC(int32_t) FUNC(int64_t) FUNC(float) FUNC(double)
+#if TF_MINOR_VERSION >= 9
 	#define REGISTER_AssignVariableOp(type)		REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype").HostMemory("resource"), AssignVariableOp<VEDevice, type>);
+#else
+	#define REGISTER_AssignVariableOp(type)		REGISTER_KERNEL_BUILDER(Name("AssignVariableOp").Device(DEVICE_VE).TypeConstraint<type>("dtype"), AssignVariableOp<VEDevice, type>);
+#endif
 
 	REGISTER_TYPES(REGISTER_AssignVariableOp)
 
 	REGISTER_KERNEL_BUILDER(Name("DestroyResourceOp")	.Device(DEVICE_VE).HostMemory("resource"),		DestroyResourceOp);
 	REGISTER_KERNEL_BUILDER(Name("ReadVariableOp")		.Device(DEVICE_VE).HostMemory("resource"),		ReadVariableOp);
-	REGISTER_KERNEL_BUILDER(Name("VarHandleOp")			.Device(DEVICE_VE).HostMemory("resource"),		VarHandleOp); // TODO: .TypeConstraint<type>("dtype") ?
+	REGISTER_KERNEL_BUILDER(Name("VarHandleOp")			.Device(DEVICE_VE).HostMemory("resource"),		VarHandleOp);
 	REGISTER_KERNEL_BUILDER(Name("_ReadVariablesOp")	.Device(DEVICE_VE).HostMemory("resources"),		ReadVariablesOp);
 }
 

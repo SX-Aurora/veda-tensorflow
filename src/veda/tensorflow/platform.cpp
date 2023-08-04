@@ -1,5 +1,4 @@
 #include <veda/tensorflow/api.h>
-#include <veda/cpp/api.h>
 
 #include "__ns.h"
 //------------------------------------------------------------------------------
@@ -18,9 +17,7 @@ static void create_timer_fns(const SP_Platform* platform, SP_TimerFns* timer, TF
 
 //------------------------------------------------------------------------------
 static void get_device_count(const SP_Platform* platform, int* device_count, TF_Status* status) {
-	TRY(
-		*device_count = veda::Device::count();
-	)
+	CVEDA(vedaDeviceGetCount(device_count));
 	TF_SetStatus(status, TF_OK,	"");
 }
 
